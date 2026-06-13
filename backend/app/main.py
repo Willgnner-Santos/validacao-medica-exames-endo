@@ -14,7 +14,7 @@ from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import get_db, init_db
-from .models import Avaliacao
+from .models import Avaliacao, ImagemCache
 from .schemas import AvaliacaoItem, AvaliacaoSubmit, Progresso
 
 load_dotenv()
@@ -38,6 +38,7 @@ app.add_middleware(
 async def startup():
     await init_db()
     await seed_from_metadata()
+    await seed_images()
 
 
 async def seed_from_metadata():
@@ -69,6 +70,31 @@ async def seed_from_metadata():
             db.add(av)
         await db.commit()
         print(f"[seed] {len(entries)} imagens carregadas do metadata.json")
+
+
+async def seed_images():
+    """Carrega PNGs do filesystem para o banco — executa uma vez só na primeira inicialização."""
+    if not IMAGES_DIR.exists():
+        return
+
+    from .database import SessionLocal
+    async with SessionLocal() as db:
+        count = await db.scalar(select(func.count()).select_from(ImagemCache))
+        if count and count > 0:
+            return
+
+        pngs = list(IMAGES_DIR.glob("*.png"))
+        if not pngs:
+            return
+
+        for png in pngs:
+            db.add(ImagemCache(
+                filename=png.name,
+                content_type="image/png",
+                dados=png.read_bytes(),
+            ))
+        await db.commit()
+        print(f"[seed] {len(pngs)} imagens carregadas no banco")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -189,11 +215,16 @@ async def progresso(db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/api/imagem/{filename}")
-async def servir_imagem(filename: str):
+async def servir_imagem(filename: str, db: AsyncSession = Depends(get_db)):
+    # Tenta servir do banco primeiro (produção sem volume)
+    row = await db.get(ImagemCache, filename)
+    if row:
+        return Response(content=row.dados, media_type=row.content_type)
+    # Fallback: filesystem local (dev com volume montado)
     path = IMAGES_DIR / filename
-    if not path.exists():
-        raise HTTPException(404, f"Imagem não encontrada: {filename}")
-    return FileResponse(path)
+    if path.exists():
+        return FileResponse(path)
+    raise HTTPException(404, f"Imagem não encontrada: {filename}")
 
 
 @app.get("/api/exportar")

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, Float, Boolean, DateTime, Text, func
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, Text, LargeBinary, func
 from sqlalchemy.orm import Mapped, mapped_column
 from .database import Base
 
@@ -34,3 +34,12 @@ class Avaliacao(Base):
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class ImagemCache(Base):
+    """Armazena os bytes das imagens no banco — sem dependência de volume em produção."""
+    __tablename__ = "imagens_cache"
+
+    filename: Mapped[str] = mapped_column(String(128), primary_key=True)
+    content_type: Mapped[str] = mapped_column(String(32), default="image/png")
+    dados: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
