@@ -148,7 +148,7 @@ async def _regenerar_csv(db: AsyncSession):
         ])
 
     csv_path = EXPORTS_DIR / "avaliacoes_medicas.csv"
-    csv_path.write_text(buf.getvalue(), encoding="utf-8")
+    csv_path.write_text(buf.getvalue(), encoding="utf-8-sig")
 
 
 @app.post("/api/avaliacoes/{av_id}", response_model=AvaliacaoItem)
