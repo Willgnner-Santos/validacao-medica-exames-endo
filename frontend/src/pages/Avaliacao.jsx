@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchAvaliacao, fetchAvaliacoes, salvarAvaliacao } from '../api'
+import { fetchAvaliacao, fetchAvaliacoes, fetchProgresso, salvarAvaliacao } from '../api'
 
 const CONCORDANCIA = [
   { valor: 1, label: 'Região errada',        desc: 'O destaque não corresponde ao achado',  cor: 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100' },
@@ -58,8 +58,19 @@ export default function Avaliacao() {
         ativacao_na_lesao: ativacao || null,
         observacao: obs || null,
       })
-      if (nextId) navigate(`/avaliar/${nextId}`)
-      else setMostrarConclusao(true)
+      // Verifica se TODAS foram avaliadas antes de mostrar o popup
+      const prog = await fetchProgresso()
+      const todasConcluidas = prog.pendentes === 0
+
+      if (todasConcluidas) {
+        setMostrarConclusao(true)
+      } else {
+        // Navega para a próxima não avaliada, ou para o dashboard se não houver nextId
+        const proximaNaoAvaliada = todos.find(t => !t.avaliado && t.id !== Number(id))
+        if (nextId) navigate(`/avaliar/${nextId}`)
+        else if (proximaNaoAvaliada) navigate(`/avaliar/${proximaNaoAvaliada.id}`)
+        else navigate('/')
+      }
     } finally {
       setSalvando(false)
     }
