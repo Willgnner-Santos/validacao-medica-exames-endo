@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  # ── Desenvolvimento local (backend + frontend separados) ────────────────────
+  backend:
+    build: ./backend
+    env_file: .env
+    volumes:
+      - ../results/nb05/images:/app/images:ro
+      - ../results/nb05/metadata.json:/app/data/metadata.json:ro
+      - ./exports:/app/exports
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    profiles: ["dev"]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles: ["dev"]
+
+  # ── Produção: tudo em um container só (deploy EasyPanel) ───────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - ../results/nb05/images:/app/images:ro
+      - ../results/nb05/metadata.json:/app/data/metadata.json:ro
+      - ./exports:/app/exports
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    profiles: ["prod"]
