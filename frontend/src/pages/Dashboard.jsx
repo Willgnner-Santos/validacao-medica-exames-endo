@@ -75,7 +75,7 @@ export default function Dashboard() {
             <span className={`font-semibold text-base ${completo ? 'text-green-700' : pendentes <= 5 ? 'text-amber-700' : 'text-slate-700'}`}>
               {completo
                 ? 'Avaliação concluída!'
-                : `${pendentes} imagem${pendentes !== 1 ? 'ns' : ''} pendente${pendentes !== 1 ? 's' : ''}`}
+                : `${pendentes} ${pendentes !== 1 ? 'imagens' : 'imagem'} pendente${pendentes !== 1 ? 's' : ''}`}
             </span>
             <span className={`text-sm font-medium ${completo ? 'text-green-600' : 'text-slate-500'}`}>
               {progresso?.avaliados} / {progresso?.total}
@@ -103,7 +103,7 @@ export default function Dashboard() {
                 : 'bg-blue-50 text-blue-700 border border-blue-100'
             }`}>
               {pendentes <= 5
-                ? `Faltam apenas ${pendentes} imagem${pendentes !== 1 ? 'ns' : ''}! Clique nas miniaturas abaixo para concluir.`
+                ? `Faltam apenas ${pendentes} ${pendentes !== 1 ? 'imagens' : 'imagem'}! Clique nas miniaturas abaixo para concluir.`
                 : 'Clique em uma imagem abaixo para iniciar ou continuar a avaliação.'}
             </p>
           )}
