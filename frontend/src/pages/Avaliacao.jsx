@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { fetchAvaliacao, fetchAvaliacoes, fetchProgresso, salvarAvaliacao } from '../api'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { fetchAvaliacao, fetchAvaliacoes, fetchProgresso, salvarAvaliacao, getMedico } from '../api'
 
 const CONCORDANCIA = [
   { valor: 1, label: 'Região errada',        desc: 'O destaque não corresponde ao achado',  cor: 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100' },
@@ -11,9 +11,10 @@ const CONCORDANCIA = [
 export default function Avaliacao() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [av, setAv]               = useState(null)
-  const [todos, setTodos]         = useState([])
+  const [todos, setTodos]         = useState(location.state?.todos ?? [])
   const [concordancia, setConcordancia] = useState(null)
   const [ativacao, setAtivacao]   = useState('')
   const [obs, setObs]             = useState('')
@@ -21,7 +22,6 @@ export default function Avaliacao() {
   const [loading, setLoading]           = useState(true)
   const [mostrarConclusao, setMostrarConclusao] = useState(false)
 
-  // Limpa o formulário imediatamente ao trocar de imagem — evita confusão visual
   useEffect(() => {
     setConcordancia(null)
     setAtivacao('')
@@ -30,11 +30,11 @@ export default function Avaliacao() {
   }, [id])
 
   useEffect(() => {
-    Promise.all([fetchAvaliacao(Number(id)), fetchAvaliacoes()])
+    const listaPromise = todos.length > 0 ? Promise.resolve(todos) : fetchAvaliacoes()
+    Promise.all([fetchAvaliacao(Number(id)), listaPromise])
       .then(([item, lista]) => {
         setAv(item)
         setTodos(lista)
-        // Só preenche se já foi avaliado anteriormente
         if (item.avaliado) {
           setConcordancia(item.concordancia)
           setAtivacao(item.ativacao_na_lesao ?? '')
@@ -58,19 +58,24 @@ export default function Avaliacao() {
         ativacao_na_lesao: ativacao || null,
         observacao: obs || null,
       })
-      // Verifica se TODAS foram avaliadas antes de mostrar o popup
-      const prog = await fetchProgresso()
-      const todasConcluidas = prog.pendentes === 0
 
-      if (todasConcluidas) {
+      // Atualiza a lista local sem ir ao servidor
+      const todosAtualizados = todos.map(t =>
+        t.id === Number(id) ? { ...t, avaliado: true, concordancia } : t
+      )
+      setTodos(todosAtualizados)
+
+      const pendentes = todosAtualizados.filter(t => !t.avaliado).length
+      if (pendentes === 0) {
         setMostrarConclusao(true)
-      } else {
-        // Navega para a próxima não avaliada, ou para o dashboard se não houver nextId
-        const proximaNaoAvaliada = todos.find(t => !t.avaliado && t.id !== Number(id))
-        if (nextId) navigate(`/avaliar/${nextId}`)
-        else if (proximaNaoAvaliada) navigate(`/avaliar/${proximaNaoAvaliada.id}`)
-        else navigate('/')
+        return
       }
+
+      const navState = { state: { todos: todosAtualizados } }
+      const proximaNaoAvaliada = todosAtualizados.find(t => !t.avaliado && t.id !== Number(id))
+      if (nextId) navigate(`/avaliar/${nextId}`, navState)
+      else if (proximaNaoAvaliada) navigate(`/avaliar/${proximaNaoAvaliada.id}`, navState)
+      else navigate('/dashboard')
     } finally {
       setSalvando(false)
     }
@@ -105,16 +110,16 @@ export default function Avaliacao() {
         </p>
         <div className="flex flex-col gap-3">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/resumo')}
             className="w-full py-3 rounded-xl bg-medical-600 text-white font-semibold hover:bg-medical-700 transition shadow"
           >
-            Ver resumo das avaliações
+            Ver estatísticas
           </button>
           <button
-            onClick={() => navigate('/resumo')}
+            onClick={() => navigate('/dashboard')}
             className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm hover:bg-slate-50 transition"
           >
-            Ver estatísticas
+            Ver todas as imagens
           </button>
         </div>
       </div>
@@ -136,7 +141,7 @@ export default function Avaliacao() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="text-slate-400 hover:text-slate-600 transition text-sm">
+          <button onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-slate-600 transition text-sm">
             ← Voltar
           </button>
           <div className="flex-1">
@@ -147,13 +152,13 @@ export default function Avaliacao() {
           </div>
           <div className="flex gap-2">
             {prevId && (
-              <button onClick={() => navigate(`/avaliar/${prevId}`)}
+              <button onClick={() => navigate(`/avaliar/${prevId}`, { state: { todos } })}
                 className="text-sm px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition">
                 ‹ Anterior
               </button>
             )}
             {nextId && (
-              <button onClick={() => navigate(`/avaliar/${nextId}`)}
+              <button onClick={() => navigate(`/avaliar/${nextId}`, { state: { todos } })}
                 className="text-sm px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition">
                 Próxima ›
               </button>

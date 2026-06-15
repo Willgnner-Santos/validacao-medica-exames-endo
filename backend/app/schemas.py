@@ -6,6 +6,7 @@ class AvaliacaoItem(BaseModel):
     id: int
     image_name: str
     rotulo: str
+    medico_nome: str
     confianca_modelo: float
     cam_mean: float | None
     cam_pct_above_050: float | None

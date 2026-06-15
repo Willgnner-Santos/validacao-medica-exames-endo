@@ -1,17 +1,23 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, Float, Boolean, DateTime, Text, LargeBinary, func
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, Text, LargeBinary, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from .database import Base
 
 
 class Avaliacao(Base):
     __tablename__ = "avaliacoes"
+    __table_args__ = (
+        UniqueConstraint("image_name", "medico_nome", name="uq_avaliacao_imagem_medico"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # Identificação da imagem
     image_name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     rotulo: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    # Identificação do avaliador
+    medico_nome: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
 
     # Dados do modelo (vindos do metadata.json)
     confianca_modelo: Mapped[float] = mapped_column(Float, nullable=False)
@@ -20,7 +26,7 @@ class Avaliacao(Base):
     tem_reflexo_luz: Mapped[bool] = mapped_column(Boolean, default=False)
     interpretation: Mapped[str] = mapped_column(Text, nullable=True)
 
-    # Avaliação da médica
+    # Avaliação do médico
     concordancia: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 1 = Região errada, 2 = Parcialmente correta, 3 = Correta
 

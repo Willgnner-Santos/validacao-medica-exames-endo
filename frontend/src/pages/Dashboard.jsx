@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchAvaliacoes, fetchProgresso } from '../api'
+import { fetchAvaliacoes, fetchProgresso, getMedico, clearMedico, exportarCSV } from '../api'
 
 const CLASSES = ['ENANTEMA', 'PÓLIPO', 'ÚLCERA', 'EROSÃO', 'MICRONODULARIDADE']
 
@@ -24,12 +24,22 @@ export default function Dashboard() {
   const [progresso, setProgresso]   = useState(null)
   const [loading, setLoading]       = useState(true)
   const navigate = useNavigate()
+  const medico = getMedico()
 
   useEffect(() => {
-    Promise.all([fetchAvaliacoes(), fetchProgresso()])
-      .then(([avs, prog]) => { setAvaliacoes(avs); setProgresso(prog) })
+    fetchAvaliacoes()
+      .then((avs) => {
+        setAvaliacoes(avs)
+        return fetchProgresso()
+      })
+      .then((prog) => setProgresso(prog))
       .finally(() => setLoading(false))
   }, [])
+
+  function handleTrocarMedico() {
+    clearMedico()
+    navigate('/')
+  }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -51,13 +61,27 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <h1 className="text-xl font-semibold text-slate-800">
-            Validação de Explicabilidade — IA Gastroscopia
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Avalie se as regiões destacadas pelo modelo fazem sentido clínico
-          </p>
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-800">
+              Validação de Explicabilidade — IA Gastroscopia
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Avalie se as regiões destacadas pelo modelo fazem sentido clínico
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right">
+              <p className="text-xs text-slate-400">Avaliador</p>
+              <p className="text-sm font-semibold text-slate-700">{medico}</p>
+            </div>
+            <button
+              onClick={handleTrocarMedico}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition"
+            >
+              Trocar
+            </button>
+          </div>
         </div>
       </header>
 
@@ -108,9 +132,17 @@ export default function Dashboard() {
             </p>
           )}
           {completo && (
-            <p className="mt-3 text-sm bg-green-100 text-green-800 border border-green-200 rounded-lg px-3 py-2">
-              Todas as imagens foram avaliadas. Obrigada pela sua colaboração!
-            </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-sm bg-green-100 text-green-800 border border-green-200 rounded-lg px-3 py-2 flex-1">
+                Todas as imagens foram avaliadas. Obrigado pela sua colaboração!
+              </p>
+              <button
+                onClick={exportarCSV}
+                className="text-sm px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition font-medium shrink-0"
+              >
+                Exportar CSV
+              </button>
+            </div>
           )}
 
           {progresso?.por_classe && (
@@ -169,7 +201,7 @@ export default function Dashboard() {
                     className={`bg-white rounded-xl border-2 shadow-sm overflow-hidden cursor-pointer
                       hover:shadow-md hover:-translate-y-0.5 transition-all duration-150
                       ${av.avaliado ? 'border-green-300' : 'border-slate-200 hover:border-slate-300'}`}
-                    onClick={() => navigate(`/avaliar/${av.id}`)}
+                    onClick={() => navigate(`/avaliar/${av.id}`, { state: { todos: avaliacoes } })}
                   >
                     <div className="relative bg-slate-900 aspect-square overflow-hidden">
                       <img

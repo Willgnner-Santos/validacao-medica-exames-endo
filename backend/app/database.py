@@ -44,6 +44,14 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     async with engine.begin() as conn:
-        # Cria o schema se não existir antes de criar as tabelas
         await conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"'))
         await conn.run_sync(Base.metadata.create_all)
+        # Migração: adiciona medico_nome se a tabela já existia sem ela
+        await conn.execute(text(
+            f'ALTER TABLE "{DB_SCHEMA}".avaliacoes '
+            f'ADD COLUMN IF NOT EXISTS medico_nome VARCHAR(128) NOT NULL DEFAULT \'\''
+        ))
+        await conn.execute(text(
+            f'CREATE INDEX IF NOT EXISTS ix_avaliacoes_medico_nome '
+            f'ON "{DB_SCHEMA}".avaliacoes (medico_nome)'
+        ))

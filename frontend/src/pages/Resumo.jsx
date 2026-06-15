@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchProgresso } from '../api'
+import { fetchProgresso, getMedico, exportarCSV } from '../api'
 
 const COR_MEDIA = (m) => {
   if (!m) return 'text-slate-400'
@@ -12,6 +12,7 @@ const COR_MEDIA = (m) => {
 export default function Resumo() {
   const [prog, setProg] = useState(null)
   const navigate = useNavigate()
+  const medico = getMedico()
 
   useEffect(() => { fetchProgresso().then(setProg) }, [])
 
@@ -32,7 +33,7 @@ export default function Resumo() {
             {completo ? 'Avaliação concluída!' : 'Resumo parcial'}
           </h1>
           <p className="text-slate-500 mt-1 text-sm">
-            {prog.avaliados} de {prog.total} imagens avaliadas ({prog.pct_completo}%)
+            {medico} — {prog.avaliados} de {prog.total} imagens avaliadas ({prog.pct_completo}%)
           </p>
         </div>
 
@@ -80,18 +81,24 @@ export default function Resumo() {
         <div className="flex flex-col gap-3">
           {!completo ? (
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
               className="w-full py-3 rounded-xl bg-medical-600 text-white font-semibold hover:bg-medical-700 transition shadow"
             >
               Continuar avaliando →
             </button>
           ) : (
             <>
+              <button
+                onClick={exportarCSV}
+                className="w-full py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition shadow"
+              >
+                Exportar CSV
+              </button>
               <div className="text-center text-sm text-slate-500 bg-slate-100 rounded-xl px-4 py-3">
                 Suas respostas foram salvas. Obrigado pela avaliação!
               </div>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 className="w-full py-3 rounded-xl border border-slate-200 text-slate-500 text-sm hover:bg-slate-50 transition"
               >
                 Ver todas as imagens
